@@ -1,0 +1,106 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "hc-sermons/list",
+	"title": "Sermon List",
+	"category": "hc-blocks",
+	"icon": "list-view",
+	"description": "Display a list or grid of sermons — most recent, by series, by speaker, or hand-picked.",
+	"textdomain": "hc-sermons",
+	"attributes": {
+		"source": {
+			"type": "string",
+			"default": "recent"
+		},
+		"seriesId": {
+			"type": "number",
+			"default": 0
+		},
+		"speakerId": {
+			"type": "number",
+			"default": 0
+		},
+		"pickedIds": {
+			"type": "array",
+			"default": []
+		},
+		"count": {
+			"type": "number",
+			"default": 6
+		},
+		"layout": {
+			"type": "string",
+			"default": "grid"
+		},
+		"featuredPosition": {
+			"type": "string",
+			"default": "left"
+		},
+		"swapAutoplay": {
+			"type": "boolean",
+			"default": true
+		},
+		"showFeaturedTitle": {
+			"type": "boolean",
+			"default": false
+		},
+		"featuredWidth": {
+			"type": "number",
+			"default": 60
+		},
+		"itemSize": {
+			"type": "string",
+			"default": "comfortable"
+		},
+		"showPageLinks": {
+			"type": "boolean",
+			"default": false
+		},
+		"listTitle": {
+			"type": "string",
+			"default": ""
+		},
+		"listTitlePosition": {
+			"type": "string",
+			"default": "above-list"
+		},
+		"orderBy": {
+			"type": "string",
+			"default": "preached"
+		},
+		"order": {
+			"type": "string",
+			"default": "DESC"
+		},
+		"showThumbnail": {
+			"type": "boolean",
+			"default": true
+		},
+		"showDate": {
+			"type": "boolean",
+			"default": true
+		},
+		"showSpeaker": {
+			"type": "boolean",
+			"default": false
+		},
+		"showSeries": {
+			"type": "boolean",
+			"default": false
+		},
+		"showScripture": {
+			"type": "boolean",
+			"default": false
+		},
+		"useContainer": {
+			"type": "boolean",
+			"default": true
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": ["wide", "full"]
+	},
+	"editorScript": "file:./index.js",
+	"viewScript": "file:./view.js"
+}

@@ -1,0 +1,387 @@
+/**
+ * NCC Sermons — front-end styles.
+ *
+ * Loaded on any page where a sermon block, single-sermon, or archive
+ * appears. Themes can override any rule by raising specificity or
+ * loading a higher-priority sheet.
+ *
+ * Naming uses BEM-ish: .hc-sermon-<context>__<part>.
+ */
+
+/* -------------------------------------------------------------------------- */
+/* Shared                                                                     */
+/* -------------------------------------------------------------------------- */
+
+.hc-sermon-video {
+	position: relative;
+	padding-bottom: 56.25%;
+	height: 0;
+	overflow: hidden;
+	border-radius: 1.5rem;
+}
+.hc-sermon-video iframe {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	border: 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Single block (hc-sermons/single)                                          */
+/* -------------------------------------------------------------------------- */
+
+.hc-sermon-single-block__title {
+	margin: 0 0 0.75rem;
+}
+.hc-sermon-single-block__meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+	color: #666;
+	font-size: 0.95rem;
+	margin-bottom: 1rem;
+}
+.hc-sermon-single-block__excerpt {
+	margin-top: 1rem;
+}
+
+/* -------------------------------------------------------------------------- */
+/* List block (hc-sermons/list) — all layouts                                */
+/* -------------------------------------------------------------------------- */
+
+.hc-sermon-list__items {
+	display: flex;
+	flex-direction: column;
+}
+.hc-sermon-list--grid .hc-sermon-list__items {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+	gap: 1.25rem;
+}
+
+.hc-sermon-list__item {
+	background: #fff;
+	color: inherit;
+	text-decoration: none;
+}
+/* Visible focus ring for keyboard users on both <a> and role=button items. */
+.hc-sermon-list__item:focus-visible {
+	outline: 2px solid var(--color-text-primary, #2271b1);
+	outline-offset: 2px;
+}
+.hc-sermon-list--grid .hc-sermon-list__item {
+	display: block;
+	border: 1px solid #e5e5e5;
+	border-radius: 0.75rem;
+	overflow: hidden;
+}
+.hc-sermon-list--list .hc-sermon-list__item,
+.hc-sermon-list--featured-list .hc-sermon-list__item {
+	display: flex;
+	gap: 1rem;
+	align-items: flex-start;
+	border-bottom: 1px solid #eee;
+	padding-bottom: 1rem;
+	background: transparent;
+	cursor: pointer;
+}
+
+.hc-sermon-list__thumb-link {
+	display: block;
+	color: inherit;
+	text-decoration: none;
+}
+.hc-sermon-list--list .hc-sermon-list__thumb-link,
+.hc-sermon-list--featured-list .hc-sermon-list__thumb-link {
+	flex-shrink: 0;
+	width: 180px;
+}
+
+.hc-sermon-list__thumb {
+	aspect-ratio: 16 / 9;
+	overflow: hidden;
+}
+.hc-sermon-list--list .hc-sermon-list__thumb,
+.hc-sermon-list--featured-list .hc-sermon-list__thumb {
+	border-radius: 0.75rem;
+}
+.hc-sermon-list__thumb img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.hc-sermon-list__body {
+	flex: 1;
+}
+.hc-sermon-list--grid .hc-sermon-list__body {
+	padding: 1rem;
+}
+
+.hc-sermon-list__item-title {
+	margin: 0 0 0.4rem;
+	font-size: 1.05rem;
+	line-height: 1.3;
+}
+.hc-sermon-list__title-link {
+	color: inherit;
+	text-decoration: none;
+}
+
+.hc-sermon-list__meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.6rem;
+	color: #666;
+	font-size: 0.85rem;
+}
+
+/* Featured + list layout — mobile-first
+   Default: featured stacks above the list, both flow normally.
+   At >=768px we upgrade to a side-by-side row with a scrollable list column. */
+.hc-sermon-list--featured-list {
+	--hc-featured-width: 60%;
+	--hc-featured-gap: 1.5rem;
+}
+.hc-sermon-list--featured-list .hc-sermon-list__featured-wrap {
+	display: flex;
+	flex-direction: column;
+	gap: var(--hc-featured-gap);
+}
+.hc-sermon-list--featured-list .hc-sermon-list__featured-title {
+	margin: 0.75rem 0 0;
+	font-size: 1.4rem;
+	line-height: 1.3;
+}
+.hc-sermon-list--featured-list .hc-sermon-list__featured-link {
+	color: inherit;
+	text-decoration: none;
+}
+.hc-sermon-list--featured-list .hc-sermon-list__items--featured {
+	display: flex;
+	flex-direction: column;
+}
+
+/* Tablet+: side-by-side, list column matches featured height and scrolls. */
+@media (min-width: 768px) {
+	.hc-sermon-list--featured-list .hc-sermon-list__featured-wrap {
+		flex-direction: row;
+		flex-wrap: wrap;
+		align-items: stretch; /* list column matches featured column height */
+	}
+	.hc-sermon-list--featured-list[data-featured-position="right"] .hc-sermon-list__featured-wrap {
+		flex-direction: row-reverse;
+	}
+	.hc-sermon-list--featured-list .hc-sermon-list__featured {
+		flex: 0 1 var(--hc-featured-width);
+		min-width: 300px;
+	}
+	/* Outer wrap is a flex column so an optional title can sit above the scroll
+	   region. The inner list takes the remaining height and scrolls. */
+	.hc-sermon-list--featured-list .hc-sermon-list__items-wrap {
+		display: flex;
+		flex-direction: column;
+		flex: 1 1 calc(100% - var(--hc-featured-width) - var(--hc-featured-gap));
+		min-width: 240px;
+		min-height: 0; /* allow inner flex child to size against parent height */
+	}
+	.hc-sermon-list--featured-list .hc-sermon-list__items--featured {
+		flex: 1 1 auto;
+		min-height: 0;
+		overflow-y: auto;
+	}
+}
+
+/* Item-size variants (Featured + list layout) ------------------------------ */
+.hc-sermon-list--featured-list[data-item-size="compact"] {
+	--hc-item-thumb: 90px;
+	--hc-item-gap: 0.5rem;
+	--hc-item-pad: 0;
+	--hc-item-pad-inner: 0.5em;
+	--hc-item-radius: 0.5rem;
+	--hc-item-title: 0.8rem;
+	--hc-item-meta: 0.75rem;
+}
+.hc-sermon-list--featured-list[data-item-size="comfortable"] {
+	--hc-item-thumb: 180px;
+	--hc-item-gap: 1rem;
+	--hc-item-pad: 1rem;
+	--hc-item-pad-inner: 0.8em;
+	--hc-item-radius: 0.75em;
+	--hc-item-title: 1.05rem;
+	--hc-item-meta: 0.85rem;
+}
+.hc-sermon-list--featured-list[data-item-size="spacious"] {
+	--hc-item-thumb: 240px;
+	--hc-item-gap: 1.25rem;
+	--hc-item-pad: 1.25rem;
+	--hc-item-pad-inner: 1em;
+	--hc-item-radius: 0.75em;
+	--hc-item-title: 1.15rem;
+	--hc-item-meta: 0.9rem;
+}
+
+.hc-sermon-list--featured-list .hc-sermon-list__items--featured .hc-sermon-list__item {
+	gap: var(--hc-item-gap, 1rem);
+	margin-bottom: var(--hc-item-pad, 1rem);
+	padding: var(--hc-item-pad-inner, 0.8em);
+	border-radius: var(--hc-item-radius, 0.75em);
+}
+.hc-sermon-list--featured-list .hc-sermon-list__items--featured .hc-sermon-list__thumb-link {
+	width: var(--hc-item-thumb, 180px);
+}
+.hc-sermon-list--featured-list .hc-sermon-list__items--featured .hc-sermon-list__item-title {
+	font-size: var(--hc-item-title, 1.05rem);
+}
+.hc-sermon-list--featured-list .hc-sermon-list__items--featured .hc-sermon-list__meta {
+	font-size: var(--hc-item-meta, 0.85rem);
+}
+
+.hc-sermon-list__item.is-active {
+	background: rgba(255, 255, 255, 0.5);
+	border: 2px solid var(--color-text-primary);
+}
+
+/* Optional list title (above the items or above the entire block). */
+.hc-sermon-list__title {
+	margin: 0 0 0.75rem;
+	font-size: 1.2rem;
+	line-height: 1.3;
+}
+
+/* Chevron — affordance that the item links to the full sermon page.
+   For featured-list, this is the only navigable element (the body swaps the
+   featured video). For grid/list, it's decorative inside the wrapping <a>. */
+.hc-sermon-list__chevron {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	margin-left: auto;
+	padding: 0.25rem;
+	color: var(--color-text-primary, currentColor);
+	text-decoration: none;
+	border-radius: 999px;
+	transition: background-color 120ms ease, transform 120ms ease;
+}
+.hc-sermon-list__chevron:hover,
+.hc-sermon-list__chevron:focus-visible {
+	background: rgba(0, 0, 0, 0.08);
+	transform: translateX(2px);
+}
+.hc-sermon-list__chevron:focus-visible {
+	outline: 2px solid var(--color-text-primary, #2271b1);
+	outline-offset: 2px;
+}
+.hc-sermon-list__chevron-icon {
+	display: block;
+}
+/* In grid layout the body sits below the thumb; push the chevron into a corner. */
+.hc-sermon-list--grid .hc-sermon-list__item {
+	position: relative;
+}
+.hc-sermon-list--grid .hc-sermon-list__chevron {
+	position: absolute;
+	top: 0.5rem;
+	right: 0.5rem;
+	background: rgba(255, 255, 255, 0.85);
+	margin-left: 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Single sermon template (full page)                                         */
+/* -------------------------------------------------------------------------- */
+
+.hc-sermon-header {
+	margin-bottom: 1.5rem;
+}
+.hc-sermon-meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+	color: #666;
+	font-size: 0.95rem;
+	margin-top: 0.5rem;
+}
+.hc-sermon-video-wrap {
+	margin-bottom: 1.5rem;
+	max-width: 960px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Archive template + filter bar                                              */
+/* -------------------------------------------------------------------------- */
+
+.hc-sermon-list-archive {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	gap: 1.5rem;
+	margin-top: 2rem;
+}
+.hc-sermon-card {
+	border: 1px solid #e5e5e5;
+	border-radius: 0.75rem;
+	overflow: hidden;
+	background: #fff;
+}
+.hc-sermon-card a {
+	display: block;
+	color: inherit;
+	text-decoration: none;
+}
+.hc-sermon-card__thumb {
+	aspect-ratio: 16 / 9;
+	overflow: hidden;
+}
+.hc-sermon-card__thumb img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+.hc-sermon-card__body {
+	padding: 1rem;
+}
+.hc-sermon-card__title {
+	margin: 0 0 0.5rem;
+	font-size: 1.2rem;
+}
+.hc-sermon-card__meta {
+	color: #666;
+	font-size: 0.9rem;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+}
+.hc-sermon-archive__pagination {
+	margin-top: 2rem;
+}
+
+/* Filter bar */
+.hc-sermon-filters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+	align-items: flex-end;
+	margin: 1.5rem 0;
+	padding: 1rem;
+	background: #f6f6f6;
+	border-radius: 0.5rem;
+}
+.hc-sermon-filters label {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	font-size: 0.85rem;
+}
+.hc-sermon-filters .hc-sermon-filters__search {
+	flex: 1;
+	min-width: 160px;
+}
+.hc-sermon-filters__buttons {
+	display: flex;
+	gap: 0.5rem;
+}
