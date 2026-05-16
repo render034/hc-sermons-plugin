@@ -57,6 +57,33 @@ if (is_admin()) {
 	require_once HC_SERMONS_DIR . 'admin/class-bulk-actions.php';
 }
 
+/**
+ * GitHub-based update checking.
+ *
+ * Uses YahnisElsts/plugin-update-checker. The plugin is checked against the
+ * latest GitHub Release of the configured repo (release mode, not branch mode)
+ * so only tagged versions ship to installs — pushes to main don't trigger
+ * updates until a Release is published.
+ *
+ * Release workflow:
+ *   1. Bump the Version: header above and HC_SERMONS_VERSION to match (e.g. 0.2.0).
+ *   2. Commit and push to main.
+ *   3. On GitHub: Releases → Draft a new release → tag `v0.2.0` → Publish.
+ *   4. Sites notice the new version within ~12h (next WP update check).
+ */
+if (file_exists(HC_SERMONS_DIR . 'vendor/plugin-update-checker/plugin-update-checker.php')) {
+	require_once HC_SERMONS_DIR . 'vendor/plugin-update-checker/plugin-update-checker.php';
+	$hc_sermons_update_checker = \YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+		HC_SERMONS_PLUGIN_URI . '/',
+		__FILE__,
+		'hc-sermons'
+	);
+	// Only consider GitHub Releases (not bare commits on a branch).
+	if (method_exists($hc_sermons_update_checker, 'getVcsApi')) {
+		$hc_sermons_update_checker->getVcsApi()->enableReleaseAssets();
+	}
+}
+
 // Bootstrap.
 add_action('plugins_loaded', function () {
 	HC_Sermons\Post_Type::init();

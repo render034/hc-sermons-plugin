@@ -12,9 +12,12 @@
 # Logs
 *.log
 
-# Dependencies / build (none yet, but reserved)
+# Dependencies / build
 node_modules/
-vendor/
+# Ignore vendor/ in general (Composer deps etc.), but the bundled
+# plugin-update-checker library must ship with the plugin.
+vendor/*
+!vendor/plugin-update-checker/
 
 # OS / misc
 Thumbs.db

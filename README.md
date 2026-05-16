@@ -68,6 +68,31 @@ Both blocks register under a shared category called **HC Blocks**
 the editor inserter. The first plugin to load creates the category;
 subsequent plugins reuse it.
 
+## Updates
+
+The plugin self-updates from this GitHub repo via
+[plugin-update-checker](https://github.com/YahnisElsts/plugin-update-checker)
+in release mode. Once installed, the site checks for new GitHub Releases on
+WordPress's normal update cadence (~12h) and shows "Update Available" in
+**WP Admin → Plugins**.
+
+### Releasing a new version
+
+1. Bump both the `Version:` header in [`hc-sermons.php`](hc-sermons.php) and
+   the `HC_SERMONS_VERSION` constant to match (e.g. `0.2.0`).
+2. Commit and push to `main`.
+3. On GitHub: **Releases → Draft a new release**.
+4. Tag: `v0.2.0` (the leading `v` is conventional and plugin-update-checker
+   handles either form).
+5. Title + description: changelog notes.
+6. Publish.
+
+Sites will pick up the new version on their next update check, or
+immediately when an admin clicks **Check Again** on the Updates screen.
+
+Pushes to `main` without a Release do **not** trigger updates — only tagged
+GitHub Releases do.
+
 ## Requirements
 
 - WordPress 6.0 or newer
