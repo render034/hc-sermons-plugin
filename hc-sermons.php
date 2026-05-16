@@ -83,6 +83,91 @@ if (file_exists(HC_SERMONS_DIR . 'vendor/plugin-update-checker/plugin-update-che
 	if (method_exists($hc_sermons_update_checker, 'getVcsApi')) {
 		$hc_sermons_update_checker->getVcsApi()->enableReleaseAssets();
 	}
+
+	// Stash the checker on a global so the admin-only "Check for updates"
+	// hooks below can call ->checkForUpdates() on demand.
+	$GLOBALS['hc_sermons_update_checker'] = $hc_sermons_update_checker;
+}
+
+if (is_admin()) {
+	/**
+	 * Adds a "Check for updates" action link to the plugin's row on the
+	 * Plugins screen, and a "Check for Updates" item under the Sermons menu.
+	 * Both POST to admin-post.php where we force a fresh check, then redirect
+	 * back with a flash notice.
+	 */
+	add_filter('plugin_action_links_' . plugin_basename(__FILE__), function ($actions) {
+		$url = wp_nonce_url(
+			admin_url('admin-post.php?action=hc_sermons_check_updates'),
+			'hc_sermons_check_updates'
+		);
+		$actions['hc_check_updates'] = sprintf(
+			'<a href="%s">%s</a>',
+			esc_url($url),
+			esc_html__('Check for updates', 'hc-sermons')
+		);
+		return $actions;
+	});
+
+	add_action('admin_menu', function () {
+		add_submenu_page(
+			'edit.php?post_type=hc_sermon',
+			__('Check for Updates', 'hc-sermons'),
+			__('Check for Updates', 'hc-sermons'),
+			'update_plugins',
+			'hc-sermons-check-updates',
+			function () { /* never rendered — see redirect_to_check_handler below */ }
+		);
+	});
+
+	// Intercept the submenu click and redirect through the same admin-post
+	// handler the action-link uses. Avoids duplicating the check logic.
+	// The screen ID is `<parent>_page_<submenu_slug>` where <parent> here is
+	// the CPT slug (hc_sermon), since the submenu lives under the CPT's
+	// "edit.php?post_type=hc_sermon" parent.
+	add_action('load-hc_sermon_page_hc-sermons-check-updates', function () {
+		$url = wp_nonce_url(
+			admin_url('admin-post.php?action=hc_sermons_check_updates'),
+			'hc_sermons_check_updates'
+		);
+		wp_safe_redirect($url);
+		exit;
+	});
+
+	add_action('admin_post_hc_sermons_check_updates', function () {
+		if (!current_user_can('update_plugins')) {
+			wp_die(esc_html__('You do not have permission to check for plugin updates.', 'hc-sermons'));
+		}
+		check_admin_referer('hc_sermons_check_updates');
+
+		$puc = $GLOBALS['hc_sermons_update_checker'] ?? null;
+		$status = 'unavailable';
+		if ($puc && method_exists($puc, 'checkForUpdates')) {
+			$puc->checkForUpdates();
+			$status = 'checked';
+		}
+
+		$referer = wp_get_referer();
+		$redirect = $referer ? $referer : admin_url('plugins.php');
+		$redirect = add_query_arg('hc_sermons_update_check', $status, $redirect);
+		wp_safe_redirect($redirect);
+		exit;
+	});
+
+	// Render a flash notice after a check.
+	add_action('admin_notices', function () {
+		if (empty($_GET['hc_sermons_update_check'])) return;
+		$status = sanitize_key(wp_unslash($_GET['hc_sermons_update_check']));
+		if ($status === 'checked') {
+			echo '<div class="notice notice-success is-dismissible"><p>'
+				. esc_html__('HC Sermons: checked for updates. If a new version is available, an "Update" link will appear on the Plugins screen.', 'hc-sermons')
+				. '</p></div>';
+		} elseif ($status === 'unavailable') {
+			echo '<div class="notice notice-warning is-dismissible"><p>'
+				. esc_html__('HC Sermons: update checker is unavailable. Verify vendor/plugin-update-checker exists.', 'hc-sermons')
+				. '</p></div>';
+		}
+	});
 }
 
 // Bootstrap.
