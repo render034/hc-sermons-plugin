@@ -3,7 +3,7 @@
 /**
  * Plugin Name: HC Sermons
  * Description: Manages sermon videos (YouTube + self-hosted) as a custom post type with series, speakers, and display blocks.
- * Version: 0.1.0
+ * Version: 0.1.1
  * Author: Nathaniel Hoyt
  * Author URI: https://hoytcreative.com
  * Plugin URI: https://github.com/render034/hc-sermons-plugin
