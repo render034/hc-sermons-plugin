@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Plugin Name: HC Sermons
  * Description: Manages sermon videos (YouTube + self-hosted) as a custom post type with series, speakers, and display blocks.
@@ -17,7 +18,7 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-define('HC_SERMONS_VERSION', '0.1.0');
+define('HC_SERMONS_VERSION', '0.1.1');
 define('HC_SERMONS_FILE', __FILE__);
 define('HC_SERMONS_DIR', plugin_dir_path(__FILE__));
 define('HC_SERMONS_URL', plugin_dir_url(__FILE__));
