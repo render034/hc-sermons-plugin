@@ -191,6 +191,12 @@
 	.hc-sermon-list--featured-list .hc-sermon-list__items--featured {
 		flex: 1 1 auto;
 		min-height: 0;
+		/* height: 0 forces the element to start with zero intrinsic height
+		   instead of auto-sizing to its content. Combined with flex: 1 1 auto,
+		   the row gives it back the stretched height — which gives overflow-y
+		   something definite to clip against. Without this, the list grows
+		   unbounded and the scrollbar never appears. */
+		height: 0;
 		overflow-y: auto;
 	}
 }
@@ -384,4 +390,79 @@
 .hc-sermon-filters__buttons {
 	display: flex;
 	gap: 0.5rem;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Block-template scoped styles                                               */
+/* -------------------------------------------------------------------------- */
+
+/* Light top padding for whatever lands first inside the single-sermon limit
+   column, so the topmost element doesn't sit flush against the absolute site
+   header. Targets the first child so reordering blocks in the template
+   doesn't break this. */
+.hc-sermon-single__limit > *:first-child {
+	padding-top: 1rem;
+}
+
+/* Meta block: date on its own line, then a flex row below for the rest
+   (speakers, scripture, series, etc.) so multiple speakers wrap nicely
+   and stay vertically centered with the avatar. */
+.hc-sermon-meta-block {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+.hc-sermon-meta__date {
+	/* Subtle styling so the date reads as a label without competing with
+	   the speaker row visually. */
+	font-size: 0.9em;
+	opacity: 0.8;
+}
+.hc-sermon-meta__row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 1rem;
+}
+
+/* The single sermon's title, video, meta, and post-content are wrapped in a
+   1024px-capped column inside the wider (1280px) section. Centers the column
+   and keeps reading-width comfortable while the recent-sermons grid below
+   can still span the full width. */
+.hc-sermon-single__limit {
+	max-width: 1024px;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+/* Speaker chip: small circular avatar + name, used inline in the meta block.
+   Multiple speakers stack horizontally with a small gap. Currently
+   non-clickable; will become a link once the speaker archive UX is built. */
+.hc-sermon-meta__speaker-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4em;
+	margin-right: 0.5em;
+	vertical-align: middle;
+}
+.hc-sermon-meta__speaker-chip:last-child {
+	margin-right: 0;
+}
+.hc-sermon-meta__speaker-avatar {
+	display: inline-block;
+	width: 2rem;
+	height: 2rem;
+	border-radius: 50%;
+	overflow: hidden;
+	background: #f0f0f0;
+	flex-shrink: 0;
+}
+.hc-sermon-meta__speaker-avatar img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+.hc-sermon-meta__speaker-name {
+	font-weight: 500;
 }

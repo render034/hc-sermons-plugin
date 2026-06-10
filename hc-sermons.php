@@ -3,7 +3,7 @@
 /**
  * Plugin Name: HC Sermons
  * Description: Manages sermon videos (YouTube + self-hosted) as a custom post type with series, speakers, and display blocks.
- * Version: 0.1.1
+ * Version: 0.4.0
  * Author: Nathaniel Hoyt
  * Author URI: https://hoytcreative.com
  * Plugin URI: https://github.com/render034/hc-sermons-plugin
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-define('HC_SERMONS_VERSION', '0.1.1');
+define('HC_SERMONS_VERSION', '0.4.0');
 define('HC_SERMONS_FILE', __FILE__);
 define('HC_SERMONS_DIR', plugin_dir_path(__FILE__));
 define('HC_SERMONS_URL', plugin_dir_url(__FILE__));
@@ -56,6 +56,7 @@ if (is_admin()) {
 	require_once HC_SERMONS_DIR . 'admin/class-meta-box.php';
 	require_once HC_SERMONS_DIR . 'admin/class-settings.php';
 	require_once HC_SERMONS_DIR . 'admin/class-bulk-actions.php';
+	require_once HC_SERMONS_DIR . 'admin/class-reimport.php';
 }
 
 /**
@@ -79,9 +80,15 @@ if (file_exists(HC_SERMONS_DIR . 'vendor/plugin-update-checker/plugin-update-che
 		__FILE__,
 		'hc-sermons'
 	);
-	// Only consider GitHub Releases (not bare commits on a branch).
+	// Only consider GitHub Releases (not bare commits on a branch). The VCS
+	// API returned by getVcsApi() is provider-specific (GitHub / GitLab /
+	// Bitbucket); enableReleaseAssets() is GitHub-only. Guard both layers so
+	// a future URL change to a non-GitHub host doesn't fatal.
 	if (method_exists($hc_sermons_update_checker, 'getVcsApi')) {
-		$hc_sermons_update_checker->getVcsApi()->enableReleaseAssets();
+		$vcs_api = $hc_sermons_update_checker->getVcsApi();
+		if ($vcs_api && method_exists($vcs_api, 'enableReleaseAssets')) {
+			$vcs_api->enableReleaseAssets();
+		}
 	}
 
 	// Stash the checker on a global so the admin-only "Check for updates"
@@ -184,6 +191,7 @@ add_action('plugins_loaded', function () {
 		HC_Sermons\Admin\Meta_Box::init();
 		HC_Sermons\Admin\Settings::init();
 		HC_Sermons\Admin\Bulk_Actions::init();
+		HC_Sermons\Admin\Reimport::init();
 	}
 });
 

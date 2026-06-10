@@ -1,0 +1,22 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "hc-sermons/video",
+	"title": "Sermon Video",
+	"category": "hc-blocks",
+	"icon": "video-alt3",
+	"description": "Render the YouTube embed for a sermon. Defaults to the current sermon when used inside a sermon template; pick a specific one otherwise.",
+	"textdomain": "hc-sermons",
+	"usesContext": ["postId", "postType"],
+	"attributes": {
+		"sermonId": {
+			"type": "number",
+			"default": 0
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": ["wide", "full"]
+	},
+	"editorScript": "file:./index.js"
+}

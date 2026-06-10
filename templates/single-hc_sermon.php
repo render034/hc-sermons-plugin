@@ -15,6 +15,9 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
+// This PHP template is only loaded for classic (non-FSE) themes. For block
+// themes the plugin registers single-hc_sermon.html and lets WP's
+// block-template renderer handle everything (see class-templates.php).
 get_header();
 ?>
 

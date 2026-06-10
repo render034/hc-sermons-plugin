@@ -1,0 +1,46 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "hc-sermons/meta",
+	"title": "Sermon Meta",
+	"category": "hc-blocks",
+	"icon": "info",
+	"description": "Display sermon meta info — date, speaker, scripture, series, duration, tags — with per-field toggles.",
+	"textdomain": "hc-sermons",
+	"usesContext": ["postId", "postType"],
+	"attributes": {
+		"sermonId": {
+			"type": "number",
+			"default": 0
+		},
+		"showDate": {
+			"type": "boolean",
+			"default": true
+		},
+		"showSpeaker": {
+			"type": "boolean",
+			"default": true
+		},
+		"showScripture": {
+			"type": "boolean",
+			"default": true
+		},
+		"showSeries": {
+			"type": "boolean",
+			"default": true
+		},
+		"showDuration": {
+			"type": "boolean",
+			"default": false
+		},
+		"showTags": {
+			"type": "boolean",
+			"default": false
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": ["wide"]
+	},
+	"editorScript": "file:./index.js"
+}

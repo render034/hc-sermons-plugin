@@ -256,6 +256,139 @@ class Sync {
 	}
 
 	/**
+	 * Convert a plain-text YouTube description into block-editor markup.
+	 *
+	 * Each blank-line-separated paragraph becomes a wp:paragraph block, so
+	 * the editor renders proper editable blocks instead of a single Classic
+	 * block. Newlines within a paragraph become <br /> tags.
+	 *
+	 * Public so the reimport flow (admin/class-reimport.php) can reuse the
+	 * same formatting for consistency between initial sync and refresh.
+	 *
+	 * @param string $description
+	 * @return string
+	 */
+	public static function description_to_blocks($description) {
+		$description = trim((string) $description);
+		if ($description === '') {
+			return '';
+		}
+
+		// Split on one or more blank lines. preg_split handles \r\n / \n / \r.
+		$paragraphs = preg_split('/(\r?\n){2,}/', $description);
+		$blocks = [];
+
+		foreach ($paragraphs as $p) {
+			$p = trim($p);
+			if ($p === '') {
+				continue;
+			}
+			// Single-line breaks within a paragraph become <br />, then we
+			// escape the result so any HTML in the YouTube description
+			// doesn't break the block markup.
+			$lines = preg_split('/\r?\n/', $p);
+			$escaped = array_map('esc_html', $lines);
+			$inner = implode('<br />', $escaped);
+			$blocks[] = "<!-- wp:paragraph -->\n<p>{$inner}</p>\n<!-- /wp:paragraph -->";
+		}
+
+		return implode("\n\n", $blocks);
+	}
+
+	/**
+	 * Re-import a single sermon's data from YouTube, overwriting title,
+	 * description (post_content), featured image, and duration. Leaves post
+	 * date, status, taxonomies, and unrelated meta alone.
+	 *
+	 * Pulls from the channel's RSS feed (same source as full sync). Only
+	 * works for videos still present in the feed — typically the last ~15
+	 * uploads. Older videos return a feed-not-found error; the caller should
+	 * surface that to the editor.
+	 *
+	 * @param int $post_id Sermon post ID.
+	 * @return true|\WP_Error true on success, WP_Error otherwise.
+	 */
+	public static function reimport_sermon($post_id) {
+		$post_id = (int) $post_id;
+		if (!$post_id || get_post_type($post_id) !== Post_Type::POST_TYPE) {
+			return new \WP_Error('hc_sermons_reimport_bad_post', __('Not a sermon post.', 'hc-sermons'));
+		}
+
+		$video_id = get_post_meta($post_id, Meta::META_VIDEO_ID, true);
+		if (!$video_id) {
+			return new \WP_Error('hc_sermons_reimport_no_video_id', __('This sermon has no YouTube video ID stored.', 'hc-sermons'));
+		}
+
+		$channel_id = trim((string) get_option(self::OPTION_CHANNEL_ID, ''));
+		if (!$channel_id) {
+			return new \WP_Error('hc_sermons_reimport_no_channel', __('No YouTube channel ID is configured in the plugin settings.', 'hc-sermons'));
+		}
+
+		// Bust the feed transient so we get fresh data even if a recent sync
+		// just cached the old version. A manual reimport implies the editor
+		// thinks something on YT changed.
+		delete_transient(self::FEED_TRANSIENT);
+
+		$xml = self::fetch_feed($channel_id);
+		if (is_wp_error($xml)) {
+			return $xml;
+		}
+
+		$videos = Feed_Parser::parse($xml);
+		if (is_wp_error($videos)) {
+			return $videos;
+		}
+
+		// Find the matching video in the feed.
+		$video = null;
+		foreach ($videos as $candidate) {
+			if (($candidate['video_id'] ?? '') === $video_id) {
+				$video = $candidate;
+				break;
+			}
+		}
+
+		if (!$video) {
+			return new \WP_Error(
+				'hc_sermons_reimport_not_in_feed',
+				sprintf(
+					/* translators: %s: YouTube video ID */
+					__('Video %s is no longer in the channel feed (YouTube only exposes the most recent ~15 videos). Reimport not possible.', 'hc-sermons'),
+					$video_id
+				)
+			);
+		}
+
+		// Title + description. We re-block the description so it stays
+		// editable in Gutenberg (matches the initial-sync behavior).
+		$update_args = [
+			'ID'           => $post_id,
+			'post_title'   => $video['title'] ?: $video_id,
+			'post_content' => self::description_to_blocks($video['description'] ?? ''),
+		];
+
+		$updated = wp_update_post($update_args, true);
+		if (is_wp_error($updated)) {
+			return $updated;
+		}
+
+		// Featured image: delete the old attachment (avoid orphans in the
+		// media library) then sideload a fresh one. set_post_thumbnail is
+		// called inside set_featured_image_from_thumbnail.
+		$old_thumb_id = get_post_thumbnail_id($post_id);
+		if ($old_thumb_id) {
+			wp_delete_attachment($old_thumb_id, true);
+		}
+		$thumb_result = YouTube::set_featured_image_from_thumbnail($post_id, $video_id);
+		// Non-fatal on thumbnail failure — the rest of the data is still good.
+
+		// Stamp when this reimport happened so the meta box can show it.
+		update_post_meta($post_id, Meta::META_LAST_REIMPORTED, time());
+
+		return true;
+	}
+
+	/**
 	 * Create a sermon CPT post from parsed video data.
 	 */
 	private static function create_sermon($video, $post_status = 'draft') {
@@ -263,7 +396,10 @@ class Sync {
 			'post_type'    => Post_Type::POST_TYPE,
 			'post_status'  => $post_status,
 			'post_title'   => $video['title'] ?: $video['video_id'],
-			'post_content' => $video['description'] ?: '',
+			// Wrap the YouTube description in block markers so the editor
+			// renders proper paragraph blocks instead of one giant Classic
+			// block. Each blank-line-separated chunk becomes its own block.
+			'post_content' => self::description_to_blocks($video['description'] ?? ''),
 		];
 
 		// Use the YouTube published date as post_date so archive sort matches upload order.

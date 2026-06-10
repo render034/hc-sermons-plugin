@@ -22,6 +22,8 @@ class Blocks {
 		$blocks = [
 			'single' => HC_SERMONS_DIR . 'blocks/single',
 			'list'   => HC_SERMONS_DIR . 'blocks/list',
+			'video'  => HC_SERMONS_DIR . 'blocks/video',
+			'meta'   => HC_SERMONS_DIR . 'blocks/meta',
 		];
 
 		foreach ($blocks as $dir) {

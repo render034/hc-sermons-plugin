@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	Default speaker avatar — silhouette placeholder shown when a speaker term
+	doesn't have a custom image attached. Circular crop applied via CSS in
+	sermons.css (.hc-sermon-meta__speaker-avatar img).
+
+	Themes can override by filtering the URL via
+	`hc_sermons_default_speaker_image_url` (see Meta::default_speaker_image_url).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" aria-hidden="true">
+	<rect width="100" height="100" fill="#e5e7eb" />
+	<circle cx="50" cy="38" r="18" fill="#9ca3af" />
+	<path d="M50 60c-18 0-30 12-32 30h64c-2-18-14-30-32-30z" fill="#9ca3af" />
+</svg>
