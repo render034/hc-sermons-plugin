@@ -208,6 +208,16 @@ class Templates {
 			return '';
 		}
 
+		// Ensure the front-end stylesheet (.hc-sermon-video ratio box, iframe
+		// fill) is loaded. This helper is the public entry point for rendering
+		// an embed and may be called outside the plugin's own block render
+		// callbacks (e.g. a theme injecting the markup via render_block), so it
+		// must enqueue its own CSS rather than relying on the caller. Enqueuing
+		// during/after render prints the style in the footer, which is fine.
+		if (class_exists(__NAMESPACE__ . '\\Assets')) {
+			Assets::enqueue();
+		}
+
 		$defaults = [
 			'autoplay' => 0,
 			'mute'     => 0,
