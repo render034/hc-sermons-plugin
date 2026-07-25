@@ -1,0 +1,34 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "hc-sermons/player",
+	"title": "Sermon Player",
+	"category": "hc-blocks",
+	"icon": "controls-play",
+	"description": "A standalone video player that listens for a selected sermon (from a Sermon Grid) and swaps to it. Renders the most recent sermon by default.",
+	"textdomain": "hc-sermons",
+	"attributes": {
+		"source": {
+			"type": "string",
+			"default": "recent"
+		},
+		"sourceId": {
+			"type": "number",
+			"default": 0
+		},
+		"autoplayOnSwap": {
+			"type": "boolean",
+			"default": true
+		},
+		"showTitle": {
+			"type": "boolean",
+			"default": false
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": ["wide", "full"]
+	},
+	"editorScript": "file:./index.js",
+	"viewScript": "file:./view.js"
+}

@@ -466,3 +466,173 @@
 .hc-sermon-meta__speaker-name {
 	font-weight: 500;
 }
+
+/* ============================================================================
+   Sermon Player + Grid blocks (hc-sermons/player, hc-sermons/grid)
+   ============================================================================ */
+
+/* Standalone player: constrain the 16:9 video and center it. */
+.hc-sermon-player {
+	margin-inline: auto;
+}
+.hc-sermon-player__video {
+	position: relative;
+}
+.hc-sermon-player__title {
+	margin: 0.75rem 0 0;
+	text-align: center;
+	font-size: 1.25rem;
+}
+.hc-sermon-player__eyebrow {
+	display: block;
+	font-size: 0.7rem;
+	font-weight: 600;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	opacity: 0.7;
+	margin-bottom: 0.15rem;
+}
+.hc-sermon-player__title-link {
+	text-decoration: none;
+	color: inherit;
+}
+.hc-sermon-player__title-link:hover {
+	text-decoration: underline;
+}
+
+/* Grid: honor the block's column count (--hc-grid-cols), with a responsive
+   floor so columns collapse on narrow viewports. */
+.hc-sermon-grid .hc-sermon-list__items {
+	display: grid;
+	grid-template-columns: repeat(var(--hc-grid-cols, 3), minmax(0, 1fr));
+	gap: 1.25rem;
+}
+@media (max-width: 900px) {
+	.hc-sermon-grid .hc-sermon-list__items {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+@media (max-width: 560px) {
+	.hc-sermon-grid .hc-sermon-list__items {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* Clicking a grid item plays it in-page: hint that it's interactive, and
+   highlight the active one. */
+.hc-sermon-grid .hc-sermon-list__item {
+	cursor: pointer;
+}
+.hc-sermon-grid .hc-sermon-list__item.is-active {
+	outline: 2px solid var(--color-turqoise, #53cbb4);
+	outline-offset: 2px;
+}
+
+/* "Now playing" equalizer bars — inline before the active item's title.
+   Hidden (takes no space) unless the item is active. */
+.hc-sermon-grid__eq {
+	display: none;
+}
+.hc-sermon-grid .hc-sermon-list__item.is-active .hc-sermon-grid__eq {
+	display: inline-flex;
+	align-items: flex-end;
+	gap: 2px;
+	height: 0.9em;
+	margin-right: 0.45em;
+	vertical-align: -0.05em;
+}
+.hc-sermon-grid__eq > span {
+	width: 3px;
+	height: 100%;
+	background: var(--color-turqoise, #53cbb4);
+	border-radius: 1px;
+	transform-origin: bottom;
+	animation: hc-eq 0.9s ease-in-out infinite;
+}
+.hc-sermon-grid__eq > span:nth-child(2) { animation-delay: -0.7s; }
+.hc-sermon-grid__eq > span:nth-child(3) { animation-delay: -0.35s; }
+.hc-sermon-grid__eq > span:nth-child(4) { animation-delay: -0.55s; }
+@keyframes hc-eq {
+	0%, 100% { transform: scaleY(0.35); }
+	50%      { transform: scaleY(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+	.hc-sermon-grid__eq > span { animation: none; transform: scaleY(0.6); }
+}
+/* No text underline on hover — the play overlay conveys the affordance.
+   The whole item is an <a>, so the theme's global a:hover{text-decoration:underline}
+   underlines it; override on the item itself (2 classes out-specify `a:hover`). */
+.hc-sermon-grid .hc-sermon-list__item,
+.hc-sermon-grid .hc-sermon-list__item:hover,
+.hc-sermon-grid .hc-sermon-list__item:hover .hc-sermon-list__item-title {
+	text-decoration: none;
+}
+
+/* Play affordance: turquoise tint + centered play button, on hover/focus only. */
+.hc-sermon-grid .hc-sermon-list__thumb {
+	position: relative;
+}
+.hc-sermon-grid__play {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #fff;
+	background: color-mix(in srgb, var(--color-turqoise, #53cbb4) 78%, transparent);
+	opacity: 0;
+	transition: opacity 0.18s ease;
+	pointer-events: none;
+}
+.hc-sermon-grid__play svg {
+	width: 28px;
+	height: 28px;
+	transform: scale(0.85);
+	transition: transform 0.18s ease;
+	/* Circular badge around the play glyph. */
+	box-sizing: content-box;
+	padding: 14px;
+	border-radius: 50%;
+	background: rgba(0, 0, 0, 0.25);
+}
+.hc-sermon-grid .hc-sermon-list__item:hover .hc-sermon-grid__play,
+.hc-sermon-grid .hc-sermon-list__item:focus-visible .hc-sermon-grid__play {
+	opacity: 1;
+}
+.hc-sermon-grid .hc-sermon-list__item:hover .hc-sermon-grid__play svg {
+	transform: scale(1);
+}
+
+/* Pagination */
+.hc-sermon-grid__pagination {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	align-items: center;
+	gap: 0.4rem;
+	margin-top: 2rem;
+}
+.hc-sermon-grid__pagination .page-numbers {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 2.25rem;
+	height: 2.25rem;
+	padding: 0 0.6rem;
+	border-radius: 6px;
+	text-decoration: none;
+	color: inherit;
+	background: rgba(0, 0, 0, 0.05);
+	line-height: 1;
+}
+.hc-sermon-grid__pagination .page-numbers:hover {
+	background: rgba(0, 0, 0, 0.1);
+}
+.hc-sermon-grid__pagination .page-numbers.current {
+	background: var(--color-turqoise, #53cbb4);
+	color: var(--color-cta-text, #1f2937);
+	font-weight: 600;
+}
+.hc-sermon-grid__pagination .page-numbers.dots {
+	background: none;
+}

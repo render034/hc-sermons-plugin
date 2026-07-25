@@ -70,6 +70,16 @@ class Archive_Filters {
 			[ 'key' => Meta::META_PREACHED_DATE, 'compare' => 'EXISTS' ],
 			[ 'key' => Meta::META_PREACHED_DATE, 'compare' => 'NOT EXISTS' ],
 		]));
+
+		// Align the archive main query's page size with the Sermon Grid block's
+		// per-page count. The grid runs its own WP_Query but reads the same `paged`
+		// var, so if the main query paginated at a different size, deep page URLs
+		// (/sermons/page/N/) could 404 before the block ever renders. Default 12
+		// matches the grid block's default `count`; filter to change both together.
+		$per_page = (int) apply_filters('hc_sermons_archive_posts_per_page', 12);
+		if ($per_page > 0) {
+			$query->set('posts_per_page', $per_page);
+		}
 	}
 
 	private static function merge_tax_query($existing, array $new_clause): array {
