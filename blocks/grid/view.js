@@ -12,6 +12,21 @@
 	function init() {
 		var grids = document.querySelectorAll('.hc-sermon-grid');
 		grids.forEach(setupGrid);
+		syncActiveToPlayer();
+	}
+
+	// On load, mark the grid item matching whatever the player currently has
+	// loaded (most recent, ?video=, ?video_pos=, or a block pick) as active.
+	function syncActiveToPlayer() {
+		var player = document.getElementById('hc-sermon-player')
+			|| document.querySelector('.hc-sermon-player');
+		if (!player) return;
+		var current = player.getAttribute('data-current-video-id');
+		if (!current) return;
+		var match = document.querySelector(
+			'.hc-sermon-grid .hc-sermon-list__item[data-video-id="' + current + '"]'
+		);
+		if (match) markActive(match);
 	}
 
 	function setupGrid(grid) {
@@ -56,7 +71,37 @@
 			target.scrollIntoView({ behavior: 'smooth', block: 'start' });
 		}
 
+		updateUrl(item);
 		markActive(item);
+	}
+
+	// Reflect the selected sermon in the URL (no navigation), so the page can be
+	// shared/reloaded on the same video. Rules:
+	//   - if a ?video-pos / ?video_pos param exists → update it to the item's position
+	//   - else (video present or neither) → set ?video to the item's slug (prefer
+	//     slug over id even if the current param was an id)
+	function updateUrl(item) {
+		if (!window.history || !window.history.replaceState) return;
+		var url;
+		try { url = new URL(window.location.href); } catch (e) { return; }
+		var params = url.searchParams;
+
+		var slug = item.getAttribute('data-slug') || '';
+		var pos = item.getAttribute('data-pos') || '';
+
+		if ((params.has('video-pos') || params.has('video_pos')) && pos) {
+			// Keep whichever positional key is in use.
+			if (params.has('video-pos')) params.set('video-pos', pos);
+			if (params.has('video_pos')) params.set('video_pos', pos);
+		} else if (slug) {
+			params.delete('video-pos');
+			params.delete('video_pos');
+			params.set('video', slug);
+		} else {
+			return; // nothing usable to write.
+		}
+
+		window.history.replaceState(null, '', url.toString());
 	}
 
 	function markActive(target) {

@@ -106,8 +106,10 @@ return function ($attributes) {
 	$chevron_svg = '<svg class="hc-sermon-list__chevron-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 	// Per-item renderer — grid item is an <a> to the sermon page carrying the
-	// data-* the grid view.js reads to dispatch hc-sermon:select.
-	$render_item = function ($post_id) use (
+	// data-* the grid view.js reads to dispatch hc-sermon:select and sync the URL.
+	// $pos = the sermon's global 1-based position in the recent ordering (used by
+	// view.js to update a ?video-pos param).
+	$render_item = function ($post_id, $pos = 0) use (
 		$show_thumb, $show_date, $show_speaker, $show_series, $show_scripture,
 		$show_page_links, $chevron_svg
 	) {
@@ -118,10 +120,13 @@ return function ($attributes) {
 		$video_id      = get_post_meta($post_id, Meta::META_VIDEO_ID, true);
 		$permalink     = get_permalink($post_id);
 		$title         = get_the_title($post_id);
+		$slug          = get_post_field('post_name', $post_id);
 		?>
 		<a class="hc-sermon-list__item" href="<?php echo esc_url($permalink); ?>"
 		   data-post-id="<?php echo esc_attr((string) $post_id); ?>"
 		   data-video-id="<?php echo esc_attr($video_id); ?>"
+		   data-slug="<?php echo esc_attr($slug); ?>"
+		   data-pos="<?php echo esc_attr((string) $pos); ?>"
 		   data-title="<?php echo esc_attr($title); ?>">
 			<?php if ($show_thumb && has_post_thumbnail($post_id)) : ?>
 				<div class="hc-sermon-list__thumb-link">
@@ -187,7 +192,14 @@ return function ($attributes) {
 	<div <?php echo $wrapper_attrs; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built by core. ?>>
 		<?php if ($use_container) : ?><div class="container"><?php endif; ?>
 			<div class="hc-sermon-list__items">
-				<?php foreach ($post_ids as $pid) { $render_item($pid); } ?>
+				<?php
+				// Global 1-based position across pages, so a clicked item can update
+				// a ?video-pos param that matches the player's positional lookup.
+				$page_offset = ($paged - 1) * $count;
+				foreach ($post_ids as $i => $pid) {
+					$render_item($pid, $page_offset + $i + 1);
+				}
+				?>
 			</div>
 
 			<?php

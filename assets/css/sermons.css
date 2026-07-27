@@ -491,6 +491,8 @@
 	text-transform: uppercase;
 	opacity: 0.7;
 	margin-bottom: 0.15rem;
+	line-height: 1em;
+	padding-top: 1rem;
 }
 .hc-sermon-player__title-link {
 	text-decoration: none;
