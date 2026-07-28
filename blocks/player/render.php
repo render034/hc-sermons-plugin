@@ -118,8 +118,11 @@ return function ($attributes) {
 	$wrapper_attrs = get_block_wrapper_attributes([
 		'class' => 'hc-sermon-player',
 		'id'    => 'hc-sermon-player',
-		'data-autoplay-on-swap'  => $autoplay_on_swap ? '1' : '0',
-		'data-current-video-id'  => $video_id,
+		'data-autoplay-on-swap'   => $autoplay_on_swap ? '1' : '0',
+		'data-current-video-id'   => $video_id,
+		// Translatable prefix for the screen-reader live-region announcement
+		// written by view.js on swap (e.g. "Now playing: <title>").
+		'data-now-playing-label'  => esc_attr__('Now playing:', 'hc-sermons'),
 	]);
 
 	ob_start();
@@ -134,6 +137,8 @@ return function ($attributes) {
 				<a class="hc-sermon-player__title-link" href="<?php echo esc_url($permalink); ?>"><?php echo esc_html($title); ?></a>
 			</h2>
 		<?php endif; ?>
+		<?php /* Polite live region: view.js writes "Now playing: <title>" here on swap so screen readers are notified without moving focus. */ ?>
+		<div class="hc-sermon-player__status screen-reader-text" aria-live="polite"></div>
 	</div>
 	<?php
 	return ob_get_clean();

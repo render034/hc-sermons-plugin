@@ -49,7 +49,28 @@
 				e.preventDefault();
 				select(item, videoId, autoplay);
 			});
+
+			// Keyboard: Enter plays in the player (matching click), BUT only when a
+			// player is present. Without a player, Enter falls through to the link's
+			// native navigation, so the sermon page is always reachable. Modifier
+			// combos are left alone (Ctrl/Cmd+Enter etc.). The chevron, being a
+			// separate focusable link, keeps its own native Enter → navigate.
+			item.addEventListener('keydown', function (e) {
+				if (e.key !== 'Enter') return;
+				if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+				if (e.target && e.target.closest && e.target.closest('.hc-sermon-list__chevron')) return;
+				var videoId = item.getAttribute('data-video-id');
+				if (!videoId) return;
+				if (!playerExists()) return; // no player → let the link navigate.
+				e.preventDefault();
+				select(item, videoId, autoplay);
+			});
 		});
+	}
+
+	function playerExists() {
+		return !!(document.getElementById('hc-sermon-player')
+			|| document.querySelector('.hc-sermon-player'));
 	}
 
 	function select(item, videoId, autoplay) {
@@ -109,8 +130,10 @@
 		items.forEach(function (it) {
 			if (it === target) {
 				it.classList.add('is-active');
+				it.setAttribute('aria-current', 'true'); // "this is the one playing"
 			} else {
 				it.classList.remove('is-active');
+				it.removeAttribute('aria-current');
 			}
 		});
 	}

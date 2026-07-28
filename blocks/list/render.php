@@ -157,7 +157,12 @@ return function ($attributes) {
 			<?php endif; ?>
 
 			<div class="hc-sermon-list__body">
-				<h3 class="hc-sermon-list__item-title"><?php echo esc_html($title); ?></h3>
+				<h3 class="hc-sermon-list__item-title">
+					<?php if ($is_featured_layout && $video_id) : ?>
+						<span class="screen-reader-text"><?php esc_html_e('Play:', 'hc-sermons'); ?> </span>
+					<?php endif; ?>
+					<?php echo esc_html($title); ?>
+				</h3>
 
 				<?php if ($show_date || $show_speaker || $show_series || $show_scripture) : ?>
 					<div class="hc-sermon-list__meta">
@@ -226,7 +231,7 @@ return function ($attributes) {
 			<?php if ($use_container) : ?><div class="container"><?php endif; ?>
 			<?php if ($list_title_pos === 'above-block') $render_title(); ?>
 			<div class="hc-sermon-list__featured-wrap">
-				<div class="hc-sermon-list__featured">
+				<div class="hc-sermon-list__featured" data-now-playing-label="<?php echo esc_attr__('Now playing:', 'hc-sermons'); ?>">
 					<div class="hc-sermon-list__featured-video" data-featured-video-id="<?php echo esc_attr($featured_video_id); ?>">
 						<?php echo Templates::render_video($featured_id); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 					</div>
@@ -237,6 +242,8 @@ return function ($attributes) {
 							</a>
 						</h2>
 					<?php endif; ?>
+					<?php /* Polite live region for screen readers on featured swap. */ ?>
+					<div class="hc-sermon-list__featured-status screen-reader-text" aria-live="polite"></div>
 				</div>
 				<div class="hc-sermon-list__items-wrap">
 					<?php if ($list_title_pos === 'above-list') $render_title(); ?>

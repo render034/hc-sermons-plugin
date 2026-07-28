@@ -530,6 +530,30 @@
 	outline-offset: 2px;
 }
 
+/* Screen-reader-only utility (self-contained fallback in case the theme/core
+   hasn't defined .screen-reader-text in this context). */
+.hc-sermon-player .screen-reader-text,
+.hc-sermon-grid .screen-reader-text {
+	position: absolute !important;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+/* The "Now playing:" SR prefix should only be announced for the active item —
+   remove it from the accessibility tree otherwise. */
+.hc-sermon-grid__now-playing {
+	display: none;
+}
+.hc-sermon-grid .hc-sermon-list__item.is-active .hc-sermon-grid__now-playing {
+	display: inline;
+}
+
 /* "Now playing" equalizer bars — inline before the active item's title.
    Hidden (takes no space) unless the item is active. */
 .hc-sermon-grid__eq {

@@ -103,6 +103,14 @@
 			featuredLink.textContent = title;
 		}
 
+		// Announce the swap to screen readers via the polite live region.
+		var featured = featuredWrap.closest('.hc-sermon-list__featured');
+		var status = featured && featured.querySelector('.hc-sermon-list__featured-status');
+		if (status && title) {
+			var prefix = (featured.getAttribute('data-now-playing-label')) || 'Now playing:';
+			status.textContent = prefix + ' ' + title;
+		}
+
 		return fresh;
 	}
 
@@ -111,9 +119,11 @@
 			if (it === target) {
 				it.classList.add('is-active');
 				it.setAttribute('data-active', '1');
+				it.setAttribute('aria-current', 'true'); // "this is the one playing"
 			} else {
 				it.classList.remove('is-active');
 				it.removeAttribute('data-active');
+				it.removeAttribute('aria-current');
 			}
 		});
 	}

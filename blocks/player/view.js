@@ -60,6 +60,15 @@
 			if (detail.permalink) link.setAttribute('href', detail.permalink);
 			if (detail.title) link.textContent = detail.title;
 		}
+
+		// Announce the change to screen readers via the polite live region. The
+		// prefix can be overridden by localizing the player wrapper's
+		// data-now-playing-label (set from render.php); defaults to English.
+		var status = player.querySelector('.hc-sermon-player__status');
+		if (status && detail.title) {
+			var prefix = player.getAttribute('data-now-playing-label') || 'Now playing:';
+			status.textContent = prefix + ' ' + detail.title;
+		}
 	}
 
 	if (document.readyState === 'loading') {

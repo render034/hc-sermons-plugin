@@ -145,8 +145,12 @@ return function ($attributes) {
 				<h3 class="hc-sermon-list__item-title">
 					<?php if ($video_id) : ?>
 						<span class="hc-sermon-grid__eq" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+						<span class="hc-sermon-grid__now-playing screen-reader-text"><?php esc_html_e('Now playing:', 'hc-sermons'); ?> </span>
 					<?php endif; ?>
 					<?php echo esc_html($title); ?>
+					<?php if ($video_id) : ?>
+						<span class="screen-reader-text"> <?php esc_html_e('(plays in the player above)', 'hc-sermons'); ?></span>
+					<?php endif; ?>
 				</h3>
 
 				<?php if ($show_date || $show_speaker || $show_series || $show_scripture) : ?>
