@@ -21,11 +21,75 @@ class Post_Type {
 
 	public static function init() {
 		add_action('init', [__CLASS__, 'register']);
+		// Let REST consumers (e.g. the theme's "auto latest" editor preview)
+		// request the canonical sermon ordering via ?hc_orderby=preached.
+		add_filter('rest_' . self::POST_TYPE . '_query', [__CLASS__, 'rest_latest_orderby'], 10, 2);
 	}
 
 	public static function register() {
 		self::register_post_type();
 		self::register_taxonomies();
+	}
+
+	/**
+	 * The canonical "newest sermon first" ordering, shared by the archive query,
+	 * the "auto latest" resolver, and REST. Newest by preached date, falling back
+	 * to post date for sermons that have no preached date set.
+	 *
+	 * Defining it here (once) keeps the archive and every "latest sermon" lookup
+	 * from drifting apart — a drift that previously caused a freshly synced sermon
+	 * to not surface as "latest" because the sync stamps post_date from the
+	 * YouTube upload date, which is not the same as "most recent sermon."
+	 *
+	 * @return array WP_Query args fragment: orderby, meta_key, meta_query.
+	 */
+	public static function latest_ordering_args() {
+		return [
+			'orderby'    => ['meta_value' => 'DESC', 'date' => 'DESC'],
+			'meta_key'   => Meta::META_PREACHED_DATE,
+			'meta_query' => [
+				'relation' => 'OR',
+				['key' => Meta::META_PREACHED_DATE, 'compare' => 'EXISTS'],
+				['key' => Meta::META_PREACHED_DATE, 'compare' => 'NOT EXISTS'],
+			],
+		];
+	}
+
+	/**
+	 * Resolve the single latest published sermon's post ID, or null if none.
+	 * Consumers (theme placeholder resolver, blocks) should call this instead of
+	 * re-implementing the query.
+	 *
+	 * @return int|null
+	 */
+	public static function get_latest_id() {
+		$posts = get_posts(array_merge(
+			[
+				'post_type'      => self::POST_TYPE,
+				'post_status'    => 'publish',
+				'posts_per_page' => 1,
+				'fields'         => 'ids',
+				'no_found_rows'  => true,
+			],
+			self::latest_ordering_args()
+		));
+		return $posts ? (int) $posts[0] : null;
+	}
+
+	/**
+	 * REST query filter: when ?hc_orderby=preached is present on a sermon
+	 * collection request, apply the canonical latest-first ordering. Used by the
+	 * block editor's "auto latest" preview so it matches the front end.
+	 *
+	 * @param array            $args    WP_Query args prepared by the REST controller.
+	 * @param \WP_REST_Request $request The REST request.
+	 * @return array
+	 */
+	public static function rest_latest_orderby($args, $request) {
+		if ($request->get_param('hc_orderby') !== 'preached') {
+			return $args;
+		}
+		return array_merge($args, self::latest_ordering_args());
 	}
 
 	private static function register_post_type() {

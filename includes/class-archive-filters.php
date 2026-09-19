@@ -62,14 +62,13 @@ class Archive_Filters {
 			$query->set('s', sanitize_text_field(wp_unslash($_GET['s'])));
 		}
 
-		// Sort by preached date when available (otherwise post date).
-		$query->set('orderby', ['meta_value' => 'DESC', 'date' => 'DESC']);
-		$query->set('meta_key', Meta::META_PREACHED_DATE);
-		$query->set('meta_query', array_merge((array) $query->get('meta_query'), [
-			'relation' => 'OR',
-			[ 'key' => Meta::META_PREACHED_DATE, 'compare' => 'EXISTS' ],
-			[ 'key' => Meta::META_PREACHED_DATE, 'compare' => 'NOT EXISTS' ],
-		]));
+		// Sort by preached date when available (otherwise post date). Uses the
+		// canonical ordering defined on Post_Type so the archive and every
+		// "latest sermon" lookup stay in lockstep.
+		$ordering = Post_Type::latest_ordering_args();
+		$query->set('orderby', $ordering['orderby']);
+		$query->set('meta_key', $ordering['meta_key']);
+		$query->set('meta_query', array_merge((array) $query->get('meta_query'), $ordering['meta_query']));
 
 		// Align the archive main query's page size with the Sermon Grid block's
 		// per-page count. The grid runs its own WP_Query but reads the same `paged`
