@@ -52,6 +52,11 @@ class Settings {
 			'sanitize_callback' => [__CLASS__, 'sanitize_channel_id'],
 			'default'           => '',
 		]);
+		register_setting(self::OPTION_GROUP, Sync::OPTION_API_KEY, [
+			'type'              => 'string',
+			'sanitize_callback' => function ($v) { return sanitize_text_field(trim((string) $v)); },
+			'default'           => '',
+		]);
 		register_setting(self::OPTION_GROUP, Sync::OPTION_AUTO_SYNC, [
 			'type'              => 'string',
 			'sanitize_callback' => function ($v) { return $v === '1' ? '1' : '0'; },
@@ -240,6 +245,7 @@ class Settings {
 		}
 
 		$channel_id = get_option(Sync::OPTION_CHANNEL_ID, '');
+		$api_key    = get_option(Sync::OPTION_API_KEY, '');
 		$auto_sync  = get_option(Sync::OPTION_AUTO_SYNC, '0');
 		$status     = get_option(Sync::OPTION_DEFAULT_STATUS, 'draft');
 		$last       = get_option(Sync::OPTION_LAST_SYNC, null);
@@ -277,6 +283,34 @@ class Settings {
 							/>
 							<p class="description">
 								<?php esc_html_e('Paste the channel URL or UC… ID. To find it: visit the channel page, open "View Source", and search for "channelId".', 'hc-sermons'); ?>
+							</p>
+						</td>
+					</tr>
+
+					<tr>
+						<th scope="row">
+							<label for="hc_sermons_api_key"><?php esc_html_e('YouTube Data API Key', 'hc-sermons'); ?></label>
+						</th>
+						<td>
+							<input
+								type="password"
+								id="hc_sermons_api_key"
+								name="<?php echo esc_attr(Sync::OPTION_API_KEY); ?>"
+								value="<?php echo esc_attr($api_key); ?>"
+								class="regular-text"
+								autocomplete="off"
+								placeholder="AIza…"
+							/>
+							<p class="description">
+								<?php esc_html_e('Optional. Enables syncing each video’s “Date recorded” (YouTube Studio → video → Details → Show more → Date recorded) into the sermon’s Date Preached. Without a key, syncing still works but the preached date falls back to the upload date.', 'hc-sermons'); ?>
+								<br />
+								<?php
+								printf(
+									/* translators: %s = URL to Google Cloud Console credentials */
+									esc_html__('Create a key in the %s, enable “YouTube Data API v3”, then paste the key here.', 'hc-sermons'),
+									'<a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer">' . esc_html__('Google Cloud Console', 'hc-sermons') . '</a>'
+								);
+								?>
 							</p>
 						</td>
 					</tr>
@@ -334,7 +368,7 @@ class Settings {
 			<hr />
 
 			<h2><?php esc_html_e('Sync Now', 'hc-sermons'); ?></h2>
-			<p><?php esc_html_e('Fetch the latest videos from the channel RSS feed and create draft sermons for any new ones. Duplicates are skipped.', 'hc-sermons'); ?></p>
+			<p><?php esc_html_e('Fetch the latest videos from the channel RSS feed and create draft sermons for any new ones. Duplicates are skipped. When an API key is set, each sermon’s Date Preached is also filled from YouTube’s “Date recorded” (auto-derived dates on existing sermons get upgraded too; hand-edited dates are left alone).', 'hc-sermons'); ?></p>
 
 			<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
 				<?php wp_nonce_field('hc_sermons_sync_now'); ?>
@@ -353,6 +387,14 @@ class Settings {
 						(int) $last['skipped'],
 						(int) $last['videos_seen']
 					);
+					if (!empty($last['backfilled'])) {
+						echo ' — ';
+						printf(
+							/* translators: %d = number of sermons whose preached date was updated */
+							esc_html__('%d preached date(s) updated from YouTube', 'hc-sermons'),
+							(int) $last['backfilled']
+						);
+					}
 					?>
 					<?php if (!empty($last['errors'])) : ?>
 						<br/><span style="color:#b32d2e;"><?php echo esc_html(implode(' | ', $last['errors'])); ?></span>
@@ -397,6 +439,13 @@ class Settings {
 											(int) ($entry['skipped'] ?? 0),
 											(int) ($entry['seen'] ?? 0)
 										);
+										if (!empty($entry['backfilled'])) {
+											printf(
+												/* translators: %d = number of sermons whose preached date was updated */
+												esc_html__(', %d date(s) updated', 'hc-sermons'),
+												(int) $entry['backfilled']
+											);
+										}
 										?>
 										<?php if (!empty($entry['message'])) : ?>
 											<br/><small style="color:#b32d2e;"><?php echo esc_html($entry['message']); ?></small>

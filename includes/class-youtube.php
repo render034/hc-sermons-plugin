@@ -81,6 +81,120 @@ class YouTube {
 	}
 
 	/**
+	 * Fetch per-video details from the YouTube Data API v3.
+	 *
+	 * Unlike the channel RSS feed (which only carries the upload/publish date),
+	 * the Data API exposes `recordingDetails.recordingDate` — the "Date recorded"
+	 * an editor can set in YouTube Studio. That's the value we map to the
+	 * sermon's preached date. Requires an API key (Google Cloud Console →
+	 * YouTube Data API v3); without one, callers should skip enrichment.
+	 *
+	 * Batches up to 50 IDs per request (the API's `id` cap). Each videos.list
+	 * call costs 1 quota unit regardless of how many IDs it carries, so this is
+	 * cheap even across the whole library.
+	 *
+	 * Note: `recordingDate` is only present when it was set manually in YouTube
+	 * Studio; it's absent on most uploads. The returned entry omits the key when
+	 * unset — callers fall back to the publish date.
+	 *
+	 * @param string[] $video_ids One or more 11-char video IDs.
+	 * @param string   $api_key   YouTube Data API v3 key.
+	 * @return array|\WP_Error Map of video_id => [ 'published' => ISO8601|null,
+	 *                         'recording_date' => 'YYYY-MM-DD'|null ], or error.
+	 */
+	public static function fetch_video_details($video_ids, $api_key) {
+		$api_key = trim((string) $api_key);
+		if ($api_key === '') {
+			return new \WP_Error('hc_sermons_api_no_key', __('No YouTube Data API key configured.', 'hc-sermons'));
+		}
+
+		// Normalize + de-dupe; drop anything that isn't a plausible video ID.
+		$ids = [];
+		foreach ((array) $video_ids as $id) {
+			$id = trim((string) $id);
+			if (preg_match('/^[a-zA-Z0-9_-]{11}$/', $id)) {
+				$ids[$id] = true;
+			}
+		}
+		$ids = array_keys($ids);
+		if (empty($ids)) {
+			return [];
+		}
+
+		$out = [];
+		// 50 is the API's max IDs per videos.list call.
+		foreach (array_chunk($ids, 50) as $chunk) {
+			$url = add_query_arg(
+				[
+					'part' => 'snippet,recordingDetails',
+					'id'   => implode(',', $chunk),
+					'key'  => $api_key,
+				],
+				'https://www.googleapis.com/youtube/v3/videos'
+			);
+
+			$response = wp_remote_get($url, ['timeout' => 15]);
+			if (is_wp_error($response)) {
+				return $response;
+			}
+
+			$code = (int) wp_remote_retrieve_response_code($response);
+			$body = json_decode(wp_remote_retrieve_body($response), true);
+
+			if ($code !== 200) {
+				// Surface the API's own error reason when present (bad key,
+				// quota exceeded, API not enabled, etc.) so the admin can act.
+				$reason = '';
+				if (is_array($body) && isset($body['error']['message'])) {
+					$reason = $body['error']['message'];
+				}
+				return new \WP_Error(
+					'hc_sermons_api_http',
+					sprintf(
+						/* translators: 1: HTTP status, 2: API error message */
+						__('YouTube Data API returned HTTP %1$d. %2$s', 'hc-sermons'),
+						$code,
+						$reason
+					)
+				);
+			}
+
+			if (!is_array($body) || !isset($body['items']) || !is_array($body['items'])) {
+				return new \WP_Error('hc_sermons_api_invalid', __('Could not parse YouTube Data API response.', 'hc-sermons'));
+			}
+
+			foreach ($body['items'] as $item) {
+				$vid = isset($item['id']) ? (string) $item['id'] : '';
+				if ($vid === '') {
+					continue;
+				}
+				$published = isset($item['snippet']['publishedAt'])
+					? (string) $item['snippet']['publishedAt']
+					: null;
+
+				// recordingDetails.recordingDate is ISO8601 (often with a
+				// zero time, e.g. "2026-06-07T00:00:00Z"). We only want the
+				// calendar date, in site-agnostic terms — YouTube stores it as
+				// a date, so take the leading Y-m-d verbatim without tz math.
+				$recording_date = null;
+				if (isset($item['recordingDetails']['recordingDate'])) {
+					$raw = (string) $item['recordingDetails']['recordingDate'];
+					if (preg_match('/^(\d{4}-\d{2}-\d{2})/', $raw, $m)) {
+						$recording_date = $m[1];
+					}
+				}
+
+				$out[$vid] = [
+					'published'      => $published,
+					'recording_date' => $recording_date,
+				];
+			}
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Build the best available thumbnail URL for a video ID.
 	 * `maxresdefault` exists for most modern uploads; fall back to `hqdefault` which always exists.
 	 *

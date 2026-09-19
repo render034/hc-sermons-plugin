@@ -52,7 +52,20 @@ class Meta_Box {
 
 		$video_id       = get_post_meta($post->ID, Meta::META_VIDEO_ID, true);
 		$preached_date  = get_post_meta($post->ID, Meta::META_PREACHED_DATE, true);
+		$preached_src   = get_post_meta($post->ID, Meta::META_PREACHED_SOURCE, true);
 		$youtube_url    = $video_id ? 'https://www.youtube.com/watch?v=' . $video_id : '';
+
+		// Human-readable note about where the current date came from.
+		$preached_note = '';
+		if ($preached_date) {
+			if ($preached_src === 'youtube_recorded') {
+				$preached_note = __('From YouTube’s “Date recorded”.', 'hc-sermons');
+			} elseif ($preached_src === 'youtube_published') {
+				$preached_note = __('Auto-filled from the YouTube upload date (no “Date recorded” set on the video). Set one in YouTube Studio and re-sync to update, or edit here.', 'hc-sermons');
+			} elseif ($preached_src === 'manual') {
+				$preached_note = __('Set manually — sync will not overwrite this.', 'hc-sermons');
+			}
+		}
 		?>
 		<style>
 			.hc-sermons-meta { display: grid; gap: 12px; max-width: 720px; }
@@ -97,7 +110,12 @@ class Meta_Box {
 					name="hc_sermons_preached_date"
 					value="<?php echo esc_attr($preached_date); ?>"
 				/>
-				<p class="description"><?php esc_html_e('May differ from YouTube upload date.', 'hc-sermons'); ?></p>
+				<p class="description">
+					<?php esc_html_e('May differ from YouTube upload date. Auto-fills from YouTube’s “Date recorded” when set (otherwise the upload date).', 'hc-sermons'); ?>
+					<?php if ($preached_note) : ?>
+						<br /><em><?php echo esc_html($preached_note); ?></em>
+					<?php endif; ?>
+				</p>
 			</div>
 
 			<div>
@@ -139,11 +157,20 @@ class Meta_Box {
 
 		if (isset($_POST['hc_sermons_preached_date'])) {
 			$date = sanitize_text_field(wp_unslash($_POST['hc_sermons_preached_date']));
+			$previous = get_post_meta($post_id, Meta::META_PREACHED_DATE, true);
 			// Validate YYYY-MM-DD loosely; save as-is or clear.
 			if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
 				update_post_meta($post_id, Meta::META_PREACHED_DATE, $date);
+				// Only mark as a manual edit when the value actually changed, so
+				// merely re-saving a sermon doesn't freeze an auto-filled date
+				// and block future recordingDate backfills. A hand-changed date
+				// becomes 'manual' and is never auto-overwritten by sync.
+				if ($date !== $previous) {
+					update_post_meta($post_id, Meta::META_PREACHED_SOURCE, 'manual');
+				}
 			} else {
 				delete_post_meta($post_id, Meta::META_PREACHED_DATE);
+				delete_post_meta($post_id, Meta::META_PREACHED_SOURCE);
 			}
 		}
 

@@ -3,7 +3,7 @@
 /**
  * Plugin Name: HC Sermons
  * Description: Manages sermon videos (YouTube + self-hosted) as a custom post type with series, speakers, and display blocks.
- * Version: 0.5.2
+ * Version: 0.6.0
  * Author: Nathaniel Hoyt
  * Author URI: https://hoytcreative.com
  * Plugin URI: https://github.com/render034/hc-sermons-plugin
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-define('HC_SERMONS_VERSION', '0.5.2');
+define('HC_SERMONS_VERSION', '0.6.0');
 define('HC_SERMONS_FILE', __FILE__);
 define('HC_SERMONS_DIR', plugin_dir_path(__FILE__));
 define('HC_SERMONS_URL', plugin_dir_url(__FILE__));
@@ -57,6 +57,7 @@ if (is_admin()) {
 	require_once HC_SERMONS_DIR . 'admin/class-settings.php';
 	require_once HC_SERMONS_DIR . 'admin/class-bulk-actions.php';
 	require_once HC_SERMONS_DIR . 'admin/class-reimport.php';
+	require_once HC_SERMONS_DIR . 'admin/class-admin-columns.php';
 }
 
 /**
@@ -192,6 +193,7 @@ add_action('plugins_loaded', function () {
 		HC_Sermons\Admin\Settings::init();
 		HC_Sermons\Admin\Bulk_Actions::init();
 		HC_Sermons\Admin\Reimport::init();
+		HC_Sermons\Admin\Admin_Columns::init();
 	}
 });
 

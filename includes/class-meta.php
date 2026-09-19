@@ -20,6 +20,14 @@ class Meta {
 	const META_VIDEO_SOURCE    = '_hc_video_source';   // 'youtube' | 'self_hosted'
 	const META_SELF_HOSTED     = '_hc_self_hosted_url';
 	const META_PREACHED_DATE   = '_hc_preached_date';  // YYYY-MM-DD
+	// Provenance of the preached date, so sync can improve auto-derived dates
+	// without clobbering a value an editor typed by hand. One of:
+	//   'youtube_recorded'  — from YouTube's "Date recorded" (recordingDate).
+	//   'youtube_published' — fallback: derived from the upload date.
+	//   'manual'            — edited by hand in the meta box (never auto-overwritten).
+	// Absent on sermons created before this field existed; treated as
+	// 'youtube_published' by the backfill so they're upgraded exactly once.
+	const META_PREACHED_SOURCE = '_hc_preached_date_source';
 	const META_SCRIPTURE       = '_hc_scripture';
 	const META_DURATION        = '_hc_duration';       // Seconds, optional
 	const META_LAST_REIMPORTED = '_hc_last_reimported'; // Unix timestamp of the most recent manual reimport from YouTube
@@ -70,6 +78,7 @@ class Meta {
 					'video_source'     => get_post_meta($id, self::META_VIDEO_SOURCE, true),
 					'self_hosted_url'  => get_post_meta($id, self::META_SELF_HOSTED, true),
 					'preached_date'    => get_post_meta($id, self::META_PREACHED_DATE, true),
+					'preached_source'  => get_post_meta($id, self::META_PREACHED_SOURCE, true),
 					'duration'         => (int) get_post_meta($id, self::META_DURATION, true),
 				];
 			},
@@ -89,6 +98,7 @@ class Meta {
 			self::META_VIDEO_SOURCE  => ['type' => 'string', 'default' => 'youtube'],
 			self::META_SELF_HOSTED   => ['type' => 'string', 'default' => ''],
 			self::META_PREACHED_DATE => ['type' => 'string', 'default' => ''],
+			self::META_PREACHED_SOURCE => ['type' => 'string', 'default' => ''],
 			self::META_SCRIPTURE     => ['type' => 'string', 'default' => ''],
 			self::META_DURATION      => ['type' => 'integer', 'default' => 0],
 		];

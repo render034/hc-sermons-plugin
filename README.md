@@ -14,6 +14,12 @@ provides Gutenberg blocks plus a default archive for displaying them.
 - **YouTube sync** — paste a `UC…` channel ID, click Sync Now, or enable a
   daily 3 AM cron. Duplicate videos are detected by ID and skipped. A
   watchdog catches missed runs on low-traffic sites.
+- **Accurate preached dates (optional)** — add a YouTube Data API v3 key to
+  sync each video's **Date recorded** (set in YouTube Studio) into the
+  sermon's Date Preached. The upload date always drives the post date; the
+  recording date, when set, drives the preached date (falling back to the
+  upload date when unset). Existing auto-derived dates are upgraded on the
+  next sync; hand-edited dates are never overwritten.
 - **Manual sermon entry** — paste any YouTube URL or 11-character video ID;
   the plugin fetches the title via oEmbed and sideloads the thumbnail as the
   featured image. Warns when a video is already saved.
@@ -44,6 +50,7 @@ provides Gutenberg blocks plus a default archive for displaying them.
 | Setting | Description |
 |---|---|
 | Channel ID | The `UC…` ID for the YouTube channel. Find it in your channel's page source by searching for `"channelId"`. |
+| YouTube Data API Key | Optional. A YouTube Data API v3 key (Google Cloud Console → enable "YouTube Data API v3" → create an API key). Enables syncing each video's "Date recorded" into the sermon's Date Preached. Without it, the preached date falls back to the upload date. |
 | Auto-sync daily | Enable the WP-Cron task that runs at 3 AM site time. |
 | New sermons status | Whether new sermons are imported as `draft` (default) or `publish`. |
 

@@ -21,6 +21,7 @@ if (!defined('ABSPATH')) {
 class Sync {
 
 	const OPTION_CHANNEL_ID    = 'hc_sermons_channel_id';
+	const OPTION_API_KEY       = 'hc_sermons_api_key'; // YouTube Data API v3 key (optional; enables recordingDate → preached date).
 	const OPTION_AUTO_SYNC     = 'hc_sermons_auto_sync';
 	const OPTION_DEFAULT_STATUS = 'hc_sermons_default_post_status'; // 'draft' | 'publish'
 	const OPTION_LAST_SYNC     = 'hc_sermons_last_sync';
@@ -198,20 +199,58 @@ class Sync {
 		$skipped = 0;
 		$errors  = [];
 
-		// Iterate oldest-first so the created-order feels chronological.
-		foreach (array_reverse($videos) as $video) {
-			$existing = Meta::find_by_video_id($video['video_id']);
-			if ($existing) {
-				$skipped++;
-				continue;
-			}
+		// Oldest-first so the created-order feels chronological.
+		$ordered = array_reverse($videos);
 
-			$post_id = self::create_sermon($video, $default_status);
+		// Partition into new vs. already-imported up front so we can make a
+		// single batched Data API call for the recording dates of the new ones.
+		$new_videos = [];
+		foreach ($ordered as $video) {
+			if (Meta::find_by_video_id($video['video_id'])) {
+				$skipped++;
+			} else {
+				$new_videos[] = $video;
+			}
+		}
+
+		// Enrich with recordingDate when an API key is configured. Non-fatal:
+		// on any API error we log it and fall back to publish-date preached
+		// dates, so a bad/missing key never blocks the core RSS sync.
+		$api_key       = trim((string) get_option(self::OPTION_API_KEY, ''));
+		$recording_map = [];
+		if ($api_key !== '' && !empty($new_videos)) {
+			$details = YouTube::fetch_video_details(wp_list_pluck($new_videos, 'video_id'), $api_key);
+			if (is_wp_error($details)) {
+				$errors[] = $details->get_error_message();
+			} else {
+				$recording_map = $details;
+			}
+		}
+
+		foreach ($new_videos as $video) {
+			$recording_date = isset($recording_map[$video['video_id']]['recording_date'])
+				? $recording_map[$video['video_id']]['recording_date']
+				: null;
+
+			$post_id = self::create_sermon($video, $default_status, $recording_date);
 			if (is_wp_error($post_id)) {
 				$errors[] = $post_id->get_error_message();
 				continue;
 			}
 			$created++;
+		}
+
+		// Backfill: upgrade existing sermons whose preached date was auto-derived
+		// from the upload date to the real recordingDate, when one is now set on
+		// YouTube. Skips hand-edited dates and already-accurate ones. Bounded per
+		// run to keep the sync fast and within API quota.
+		$backfilled = 0;
+		if ($api_key !== '') {
+			$backfill = self::backfill_recording_dates($api_key);
+			$backfilled = (int) ($backfill['updated'] ?? 0);
+			if (!empty($backfill['errors'])) {
+				$errors = array_merge($errors, $backfill['errors']);
+			}
 		}
 
 		$result = [
@@ -220,6 +259,7 @@ class Sync {
 			'videos_seen' => count($videos),
 			'created'     => $created,
 			'skipped'     => $skipped,
+			'backfilled'  => $backfilled,
 			'errors'      => $errors,
 		];
 
@@ -390,8 +430,13 @@ class Sync {
 
 	/**
 	 * Create a sermon CPT post from parsed video data.
+	 *
+	 * @param array  $video         Parsed feed entry.
+	 * @param string $post_status   'draft' | 'publish'.
+	 * @param ?string $recording_date 'YYYY-MM-DD' from the Data API, or null when
+	 *                               unavailable (no key, or not set on the video).
 	 */
-	private static function create_sermon($video, $post_status = 'draft') {
+	private static function create_sermon($video, $post_status = 'draft', $recording_date = null) {
 		$post_args = [
 			'post_type'    => Post_Type::POST_TYPE,
 			'post_status'  => $post_status,
@@ -419,11 +464,18 @@ class Sync {
 		update_post_meta($post_id, Meta::META_VIDEO_ID, $video['video_id']);
 		update_post_meta($post_id, Meta::META_VIDEO_SOURCE, 'youtube');
 
-		// Default preached date = upload date (admin can edit later).
-		if (!empty($video['published'])) {
+		// Preached date: prefer YouTube's "Date recorded" (recordingDate) when
+		// available, else fall back to the upload date. Stamp the provenance so
+		// a later sync can upgrade an auto-derived date to the real recording
+		// date, while never touching a value an editor typed by hand.
+		if (!empty($recording_date)) {
+			update_post_meta($post_id, Meta::META_PREACHED_DATE, $recording_date);
+			update_post_meta($post_id, Meta::META_PREACHED_SOURCE, 'youtube_recorded');
+		} elseif (!empty($video['published'])) {
 			$ts = strtotime($video['published']);
 			if ($ts) {
 				update_post_meta($post_id, Meta::META_PREACHED_DATE, gmdate('Y-m-d', $ts));
+				update_post_meta($post_id, Meta::META_PREACHED_SOURCE, 'youtube_published');
 			}
 		}
 
@@ -431,6 +483,112 @@ class Sync {
 		YouTube::set_featured_image_from_thumbnail($post_id, $video['video_id']);
 
 		return $post_id;
+	}
+
+	// Max sermons to backfill per sync run. Each videos.list call handles 50
+	// IDs for 1 quota unit, so this is 4 API calls — comfortably within quota
+	// while keeping any single sync fast. Remaining sermons get picked up on
+	// subsequent runs until every eligible one is resolved.
+	const BACKFILL_BATCH_LIMIT = 200;
+
+	/**
+	 * Upgrade existing sermons' preached dates from YouTube's recordingDate.
+	 *
+	 * Eligibility (all must hold):
+	 *   - has a stored YouTube video ID;
+	 *   - preached-date source is NOT 'manual' (never touch hand-edited dates)
+	 *     and NOT already 'youtube_recorded' (already accurate);
+	 *   - missing/legacy source is treated as 'youtube_published' — i.e. the
+	 *     value was auto-derived by older code, so it's eligible exactly once.
+	 *
+	 * Only writes when the API actually returns a recordingDate that differs
+	 * from what's stored. When present, flips the source to 'youtube_recorded'
+	 * so the sermon isn't re-queried on future runs.
+	 *
+	 * @param string $api_key
+	 * @return array { updated:int, checked:int, errors:string[] }
+	 */
+	public static function backfill_recording_dates($api_key) {
+		$api_key = trim((string) $api_key);
+		if ($api_key === '') {
+			return ['updated' => 0, 'checked' => 0, 'errors' => []];
+		}
+
+		// Eligible = has a video ID AND source is not 'manual'/'youtube_recorded'.
+		// The NOT IN clause with NOT EXISTS captures legacy rows that predate the
+		// source meta (they have no source row at all).
+		$posts = get_posts([
+			'post_type'      => Post_Type::POST_TYPE,
+			'post_status'    => ['publish', 'draft', 'pending', 'private'],
+			'posts_per_page' => self::BACKFILL_BATCH_LIMIT,
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+			'meta_query'     => [
+				'relation' => 'AND',
+				[
+					'key'     => Meta::META_VIDEO_ID,
+					'compare' => 'EXISTS',
+				],
+				[
+					'relation' => 'OR',
+					[
+						'key'     => Meta::META_PREACHED_SOURCE,
+						'compare' => 'NOT EXISTS',
+					],
+					[
+						'key'     => Meta::META_PREACHED_SOURCE,
+						'value'   => ['manual', 'youtube_recorded'],
+						'compare' => 'NOT IN',
+					],
+				],
+			],
+		]);
+
+		if (empty($posts)) {
+			return ['updated' => 0, 'checked' => 0, 'errors' => []];
+		}
+
+		// Map video_id => post_id for lookup after the batched API call.
+		$id_to_post = [];
+		foreach ($posts as $pid) {
+			$vid = get_post_meta($pid, Meta::META_VIDEO_ID, true);
+			if ($vid) {
+				// If two sermons share a video ID (shouldn't happen), last wins;
+				// harmless for a date backfill.
+				$id_to_post[$vid] = $pid;
+			}
+		}
+		if (empty($id_to_post)) {
+			return ['updated' => 0, 'checked' => 0, 'errors' => []];
+		}
+
+		$details = YouTube::fetch_video_details(array_keys($id_to_post), $api_key);
+		if (is_wp_error($details)) {
+			return ['updated' => 0, 'checked' => count($id_to_post), 'errors' => [$details->get_error_message()]];
+		}
+
+		$updated = 0;
+		foreach ($details as $vid => $info) {
+			if (!isset($id_to_post[$vid])) {
+				continue;
+			}
+			$recording_date = $info['recording_date'] ?? null;
+			if (empty($recording_date)) {
+				// No recordingDate set on YouTube — leave the fallback date and
+				// its 'youtube_published' source so we re-check on future runs
+				// (the editor may add a Date recorded later).
+				continue;
+			}
+			$pid = $id_to_post[$vid];
+			$current = get_post_meta($pid, Meta::META_PREACHED_DATE, true);
+			if ($current !== $recording_date) {
+				update_post_meta($pid, Meta::META_PREACHED_DATE, $recording_date);
+			}
+			update_post_meta($pid, Meta::META_PREACHED_SOURCE, 'youtube_recorded');
+			$updated++;
+		}
+
+		return ['updated' => $updated, 'checked' => count($id_to_post), 'errors' => []];
 	}
 
 	/**
@@ -452,10 +610,11 @@ class Sync {
 			$entry['status']  = 'error';
 			$entry['message'] = $result->get_error_message();
 		} else {
-			$entry['status']  = empty($result['errors']) ? 'ok' : 'partial';
-			$entry['created'] = (int) ($result['created'] ?? 0);
-			$entry['skipped'] = (int) ($result['skipped'] ?? 0);
-			$entry['seen']    = (int) ($result['videos_seen'] ?? 0);
+			$entry['status']     = empty($result['errors']) ? 'ok' : 'partial';
+			$entry['created']    = (int) ($result['created'] ?? 0);
+			$entry['skipped']    = (int) ($result['skipped'] ?? 0);
+			$entry['seen']       = (int) ($result['videos_seen'] ?? 0);
+			$entry['backfilled'] = (int) ($result['backfilled'] ?? 0);
 			if (!empty($result['errors'])) {
 				$entry['message'] = implode(' | ', array_slice($result['errors'], 0, 3));
 			}
