@@ -49,6 +49,7 @@ require_once HC_SERMONS_DIR . 'includes/class-blocks.php';
 require_once HC_SERMONS_DIR . 'includes/class-feed-parser.php';
 require_once HC_SERMONS_DIR . 'includes/class-sync.php';
 require_once HC_SERMONS_DIR . 'includes/class-archive-filters.php';
+require_once HC_SERMONS_DIR . 'includes/class-rest.php';
 require_once HC_SERMONS_DIR . 'includes/class-assets.php';
 
 // Admin-only includes.
@@ -186,6 +187,7 @@ add_action('plugins_loaded', function () {
 	HC_Sermons\Blocks::init();
 	HC_Sermons\Sync::init();
 	HC_Sermons\Archive_Filters::init();
+	HC_Sermons\REST::init();
 	HC_Sermons\Assets::init();
 
 	if (is_admin()) {
